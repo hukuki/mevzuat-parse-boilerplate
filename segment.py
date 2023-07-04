@@ -1,5 +1,5 @@
 from enum import Enum
-from utils import get_attribute, leaves_madde, includes_madde, pro_strip
+from utils import get_attribute, leaves_madde, includes_madde, pro_strip, only_punctuations, only_digits
 import re
 
 class SegmentType(Enum):
@@ -33,6 +33,7 @@ class SegmentClassifier:
         self.current_segment = segment
         self.current_run_count += 1
 
+        if self.check_ignore(): return None
         if self.classify_ana_baslik(): return SegmentType.ANA_BASLIK
         if self.classify_mevzuat_bilgi(): return SegmentType.MEVZUAT_BILGI
         if self.classify_bolum_baslik(): return SegmentType.BOLUM_BASLIK
@@ -43,6 +44,18 @@ class SegmentClassifier:
         if self.classify_table(): return SegmentType.TABLE
         if self.classify_free_text(): return SegmentType.FREE_TEXT
 
+    def check_ignore(self):
+        text = pro_strip(self.current_segment.text)
+
+        if text == "":
+            return True
+        elif only_punctuations(text):
+            return True
+        elif only_digits(text):
+            return True
+        else:
+            return False
+        
     def classify_ana_baslik(self):
         return False
     

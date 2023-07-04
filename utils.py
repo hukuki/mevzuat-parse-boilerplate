@@ -2,6 +2,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 import re
 import sys
 from seviye_patterns import *
+import string
 
 
 alignment_dict = {
@@ -15,20 +16,13 @@ alignment_dict = {
 
 _s = ''.join(chr(c) for c in range(sys.maxunicode+1))
 stupid_spaces = ''.join(re.findall(r'\s', _s))
+punctuations = string.punctuation + "’" + "‘" + "“" + "”" + "–" + "…" + "»" + "«" + "—" + "–"
 
 def fix_paragraphs(paragraphs):
-    #Remove empty paragraphs
-    remove_empty_paragraphs(paragraphs)
-
     #Fix paranthesis
     fix_paranthesis(paragraphs)
 
     return paragraphs
-
-def remove_empty_paragraphs(paragraphs):
-    for i in reversed(range(len(paragraphs))):
-        if paragraphs[i].text == "" or is_space(paragraphs[i].text):
-            paragraphs.pop(i)
 
 def is_metadata(run):
     is_bold = get_attribute(run, 'bold')
@@ -48,7 +42,7 @@ def get_attribute(run, attribute):
             return getattr(run.style.font, attribute)
         else:
             return not not getattr(run._parent.style.font, attribute)
-        
+
 def is_space(text):
     """Checks if the given text consists of only spaces (including stupid ones)"""
     if re.fullmatch("[" + re.escape(stupid_spaces) + "]*", text) is None:
@@ -56,28 +50,21 @@ def is_space(text):
     return True
 
 def merge_runs(runs):
-    merged_runs = []
-
-    current_run = None
-    #Find a nonempty run to start with
-    for i, run in enumerate(runs):
-        if run.text and not is_space(run.text):
-            current_run = run
-            runs = runs[i:]
-            break
-
-    for run in runs[1:]:
-        if is_metadata(run) or has_same_attributes(current_run, run) or is_space(run.text):
-            #Merge
-            current_run.text += run.text
-        else:
-            #do not merge
-            merged_runs.append(current_run)
-            
-            current_run = run
+    if len(runs) < 2:
+        return runs
     
-    merged_runs.append(current_run)
-    return merged_runs
+    current_run_idx = 0
+
+    for i in range(1, len(runs)):
+        if is_metadata(runs[i]) or \
+            has_same_attributes(runs[current_run_idx], runs[i]) or \
+                is_space(runs[i].text):
+            runs[current_run_idx].text += runs[i].text
+            runs[i].text = ""
+        else:
+            current_run_idx = i
+    
+    return runs
 
 def fix_paranthesis(paragraphs):
     for paragraph in paragraphs:
@@ -129,3 +116,15 @@ def is_metadata(run):
     is_bold = get_attribute(run, 'bold')
     covered_with_parantheses = re.fullmatch(r"\(.*\)", pro_strip(run.text)) is not None
     return is_bold and covered_with_parantheses
+
+def only_punctuations(text):
+    """Checks if the given text consists of only punctuation"""
+    if re.fullmatch(r"[" + re.escape(stupid_spaces) + r"\.,\?!:;]*", text) is None:
+        return False
+    return True
+
+def only_digits(text):
+    """Checks if the given text consists of only digits"""
+    if re.fullmatch(r"[" + re.escape(stupid_spaces) + r"\d]*", text) is None:
+        return False
+    return True

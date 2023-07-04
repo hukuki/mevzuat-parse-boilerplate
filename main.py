@@ -23,6 +23,10 @@ for parag_idx, paragraph in enumerate(fixed_paragraphs):
     fixed_runs = merge_runs(paragraph.runs)
     for run_idx, run in enumerate(fixed_runs):
         segment_class = classifier.classify_next(run)
+
+        if not segment_class:
+            continue
+        
         csv_writer.writerow([parag_idx, run_idx, run.text, segment_class.name])
     
 #Handle the footnotes from the original documant.paragraphs object
