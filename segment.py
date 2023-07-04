@@ -15,7 +15,9 @@ class SegmentType(Enum):
     BEND            = 9    #Bend
     ALT_BEND        = 10    #Alt Bend
     ALT_ALT_BEND    = 11    #Alt Alt Bend
+    FIKRA_SONU      = 13    #Fıkra Sonu
     DEBUG           = 12    #Debug
+
 
 segment2idx = {segment.name: segment.value for segment in SegmentType}
 
@@ -96,7 +98,7 @@ class SegmentClassifier:
         elif alt_bend_pattern.match(text):
             return SegmentType.ALT_BEND
         else:
-            return SegmentType.FIKRA
+            return SegmentType.FIKRA_SONU
         
     @leaves_madde
     def classify_table(self):
