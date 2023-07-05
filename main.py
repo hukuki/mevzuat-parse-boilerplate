@@ -1,6 +1,6 @@
 from docx import Document
-from utils import fix_paragraphs, merge_runs
-from segment import segment2idx, SegmentClassifier
+from utils import fix_paragraphs, merge_runs, get_attribute, is_metadata
+from segment import segment2idx, SegmentClassifier, SegmentType
 import csv
 
 
@@ -26,7 +26,7 @@ for parag_idx, paragraph in enumerate(fixed_paragraphs):
         if not segment_class:
             continue
         
-        csv_writer.writerow([parag_idx, run_idx, run.text, segment_class.name])
+        csv_writer.writerow([parag_idx, run_idx, run.text, segment_class.name, get_attribute(run, "bold"), get_attribute(run, "italic"), get_attribute(run, "alignment")])
     
 #Handle the footnotes from the original documant.paragraphs object
 document = Document(file_path)
@@ -37,4 +37,12 @@ for paragraph in document.paragraphs:
                 if foot_parag.text:
                     csv_writer.writerow([parag_idx, run_idx, foot_parag.text, segment2idx["FOOTNOTE"]])
 
+
+document = Document(file_path)
+fixed_paragraphs = fix_paragraphs(document.paragraphs)
+for parag_idx, paragraph in enumerate(fixed_paragraphs):
+    for run_idx, run in enumerate(paragraph.runs):
+        if is_metadata(run):
+            csv_writer.writerow([parag_idx, run_idx, run.text, SegmentType.METADATA, get_attribute(run, "bold"), get_attribute(run, "italic"), get_attribute(run, "alignment")])
+            
 output_file.close()

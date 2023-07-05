@@ -19,8 +19,10 @@ class SegmentType(Enum):
     BEND            = 9    #Bend
     ALT_BEND        = 10    #Alt Bend
     ALT_ALT_BEND    = 11    #Alt Alt Bend
-    FIKRA_SONU      = 13    #Fıkra Sonu
-    DEBUG           = 12    #Debug
+    FIKRA_SONU      = 12    #Fıkra Sonu
+    METADATA        = 13    #Metadata
+    DEBUG           = 14    #Debug
+
 
 
 segment2idx = {segment.name: segment.value for segment in SegmentType}

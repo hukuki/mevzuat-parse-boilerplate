@@ -45,29 +45,30 @@ def is_space(text):
     return True
 
 def merge_runs(runs):
+
+    remove_metadata(runs)
+
     if len(runs) < 2:
         return runs
     
     current_run_idx = 0
 
     for i in range(current_run_idx+1, len(runs)):
-        if is_metadata(runs[i]) or \
-            has_same_attributes(runs[current_run_idx], runs[i]) or \
+        
+        if has_same_attributes(runs[current_run_idx], runs[i]) or \
                 is_space(runs[i].text) or \
                 only_punctuations(runs[i].text):
             runs[current_run_idx].text += runs[i].text
             runs[i].text = ""
         else:
-            
-            #Check whether current run is a metadata. If so, prepend it to the next run
-            if is_metadata(runs[current_run_idx]):
-                runs[i].text = runs[current_run_idx].text + runs[i].text
-                runs[current_run_idx].text = ""
-
-
             current_run_idx = i
     
     return runs
+
+def remove_metadata(runs):
+    for run in runs:
+        if is_metadata(run):
+            run.text = ""
 
 def fix_paranthesis(paragraphs):
     for paragraph in paragraphs:
@@ -131,6 +132,10 @@ def leaves_alt_bend(func):
 
 def is_metadata(run):
     """Checks if the given run is a metadata run"""
+    list_number = re.search(r"^\(\d+\)", pro_strip(run.text)) is not None
+    if list_number:
+        return False
+    
     is_bold = get_attribute(run, 'bold')
     covered_with_parantheses = re.fullmatch(r"\(.*\)", pro_strip(run.text)) is not None
     return is_bold and covered_with_parantheses
