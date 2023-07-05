@@ -4,9 +4,9 @@ from segment import segment2idx, SegmentClassifier
 import csv
 
 
-file_path = "mevzuat-raw/tck.docx"
+file_path = "mevzuat-raw/dmk.docx"
 document = Document(file_path)
-output_file = open("output.csv", "w", encoding="utf-8")
+output_file = open("output-dmk.csv", "w", encoding="utf-8")
 csv_writer = csv.writer(output_file)
 
 fixed_paragraphs = fix_paragraphs(document.paragraphs)
@@ -23,7 +23,6 @@ for parag_idx, paragraph in enumerate(fixed_paragraphs):
     fixed_runs = merge_runs(paragraph.runs)
     for run_idx, run in enumerate(fixed_runs):
         segment_class = classifier.classify_next(run)
-
         if not segment_class:
             continue
         

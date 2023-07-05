@@ -1,6 +1,10 @@
 from enum import Enum
-from utils import get_attribute, leaves_madde, includes_madde, pro_strip, only_punctuations, only_digits
+from utils import (get_attribute, leaves_madde, includes_madde, 
+                   pro_strip, only_punctuations, only_digits, 
+                   leaves_bend, remove_reference_number, find_nonempty_run,
+                   leaves_alt_bend)
 import re
+from seviye_patterns import *
 
 class SegmentType(Enum):
     ANA_BASLIK      = 0     #Ana Başlık
@@ -25,6 +29,8 @@ class SegmentClassifier:
     
     def __init__(self, flattened_runs):
         self.in_madde = False
+        self.in_bend = False
+        self.in_alt_bend = False
         self.current_segment = None
         self.flattened_runs = flattened_runs
         self.current_run_count = -1
@@ -62,21 +68,30 @@ class SegmentClassifier:
     def classify_mevzuat_bilgi(self):
         return False
     
-    @leaves_madde
+    @leaves_alt_bend
+    @leaves_bend
     def classify_bolum_baslik(self):
         is_centered = get_attribute(self.current_segment, "alignment") == "center"
-        is_bold = get_attribute(self.current_segment, 'bold')
         
-        return is_centered and is_bold
+        return is_centered
 
+    @leaves_alt_bend
+    @leaves_bend
     @leaves_madde
     def classify_alt_baslik(self):
-        is_bold = get_attribute(self.current_segment, 'bold')
+        text = remove_reference_number(self.current_segment.text)
 
-        next_is_madde_baslik = includes_madde(self.flattened_runs[self.current_run_count + 1])
+        is_italic = get_attribute(self.current_segment, 'italic')
+        ends_with_colon = pro_strip(text).endswith(':')
+        
+        #Check if next segment is madde_baslik
+        next_nonempty_run = find_nonempty_run(self.flattened_runs, self.current_run_count)
+        next_is_madde_baslik = includes_madde(next_nonempty_run)
 
-        return is_bold and next_is_madde_baslik
+        return is_italic and next_is_madde_baslik and ends_with_colon
 
+    @leaves_alt_bend
+    @leaves_bend
     def classify_madde_baslik(self):
         is_bold = get_attribute(self.current_segment, 'bold')
 
@@ -88,37 +103,40 @@ class SegmentClassifier:
         
         return False
 
-    @leaves_madde
     def classify_footnote(self):
-        return False
+        is_italic = get_attribute(self.current_segment, 'italic')
+        starts_with_list_pattern = (bool(re.match(r'^\(\d+\)', pro_strip(self.current_segment.text)))
+                                    or bool(re.match(r'^[a-z] -', pro_strip(self.current_segment.text))))
+
+        return is_italic and starts_with_list_pattern
 
     def classify_seviye(self):
-        bold = get_attribute(self.current_segment, 'bold')
         text = pro_strip(self.current_segment.text)
+        bold = get_attribute(self.current_segment, 'bold')
+        italic = get_attribute(self.current_segment, 'italic')
         
-        if bold and not self.in_madde:
+        bend_match = bend_pattern.match(text)
+        alt_bend_match = alt_bend_pattern.match(text)
+        
+        if italic or bold or not self.in_madde:
             return False
-        
-        #Define list patterns here
-        fikra_pattern =  re.compile(r"^\(\d+\)")
-        bend_pattern = re.compile(r"^[a-z]\)")
-        alt_bend_pattern = re.compile(r"^\d+\.")
-
-        if fikra_pattern.match(text):
-            return SegmentType.FIKRA
-        elif bend_pattern.match(text):
-            return SegmentType.BEND
-        elif alt_bend_pattern.match(text):
+        elif alt_bend_match:
+            self.in_alt_bend = True
             return SegmentType.ALT_BEND
+        elif bend_match:
+            self.in_bend = True
+            return SegmentType.BEND
+        elif self.in_alt_bend:
+            return SegmentType.ALT_BEND
+        elif self.in_bend:
+            return SegmentType.BEND
         else:
-            return SegmentType.FIKRA_SONU
+            return SegmentType.FIKRA
         
-    @leaves_madde
     def classify_table(self):
         #Allaha emanet
         pass
     
-    @leaves_madde
     def classify_free_text(self):
         return True
 

@@ -16,18 +16,13 @@ alignment_dict = {
 
 _s = ''.join(chr(c) for c in range(sys.maxunicode+1))
 stupid_spaces = ''.join(re.findall(r'\s', _s))
-punctuations = string.punctuation + "’" + "‘" + "“" + "”" + "–" + "…" + "»" + "«" + "—" + "–"
+punctuations = string.punctuation + "’" + "‘" + "“" + "”" + "–" + "…" + "»" + "«" + "—" + "–" + "━"
 
 def fix_paragraphs(paragraphs):
     #Fix paranthesis
     fix_paranthesis(paragraphs)
 
     return paragraphs
-
-def is_metadata(run):
-    is_bold = get_attribute(run, 'bold')
-    covered_with_parantheses = re.fullmatch(r"\(.*\)", pro_strip(run.text)) is not None
-    return is_bold and covered_with_parantheses
 
 def get_attribute(run, attribute):
     if attribute == "alignment":
@@ -55,13 +50,21 @@ def merge_runs(runs):
     
     current_run_idx = 0
 
-    for i in range(1, len(runs)):
+    for i in range(current_run_idx+1, len(runs)):
         if is_metadata(runs[i]) or \
             has_same_attributes(runs[current_run_idx], runs[i]) or \
-                is_space(runs[i].text):
+                is_space(runs[i].text) or \
+                only_punctuations(runs[i].text):
             runs[current_run_idx].text += runs[i].text
             runs[i].text = ""
         else:
+            
+            #Check whether current run is a metadata. If so, prepend it to the next run
+            if is_metadata(runs[current_run_idx]):
+                runs[i].text = runs[current_run_idx].text + runs[i].text
+                runs[current_run_idx].text = ""
+
+
             current_run_idx = i
     
     return runs
@@ -90,7 +93,8 @@ def pro_strip(text):
 
 def includes_madde(segment):
     """Looks for the pattern 'madde \d+'"""
-    trimmed = segment.text.strip().lower()
+    trimmed = pro_strip(segment.text).lower()
+    trimmed = remove_reference_number(trimmed)
     madde_pattern = re.compile(r'madde')    
     includes_madde = madde_pattern.search(trimmed) is not None
     return includes_madde
@@ -105,11 +109,25 @@ def leaves_madde(func):
         return result
     return inner
 
-def covered_with_parenthesis(segment):
-    """Looks for the pattern '(.*($'"""
-    trimmed = pro_strip(segment.text).lower()
-    ends_with_parrentesis = re.fullmatch(r".*\)", trimmed) is not None
-    return ends_with_parrentesis
+def leaves_bend(func):
+    """If the functions returns true, set in_madde=False"""
+    def inner(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if result:
+            args[0].in_bend = False
+    
+        return result
+    return inner
+
+def leaves_alt_bend(func):
+    """If the functions returns true, set in_madde=False"""
+    def inner(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if result:
+            args[0].in_alt_bend = False
+    
+        return result
+    return inner
 
 def is_metadata(run):
     """Checks if the given run is a metadata run"""
@@ -119,12 +137,29 @@ def is_metadata(run):
 
 def only_punctuations(text):
     """Checks if the given text consists of only punctuation"""
-    if re.fullmatch(r"[" + re.escape(stupid_spaces) + r"\.,\?!:;]*", text) is None:
+    if re.fullmatch(r"[" + re.escape(punctuations) + r"\.,\?!:;]*", text) is None:
         return False
     return True
 
 def only_digits(text):
     """Checks if the given text consists of only digits"""
+    text = text.replace("-", "")
     if re.fullmatch(r"[" + re.escape(stupid_spaces) + r"\d]*", text) is None:
         return False
     return True
+
+def remove_reference_number(text):
+    """Removes reference number at the end of the text, such as (4)."""
+    text = pro_strip(text)
+    text = re.sub("\(\d+\)$", "", text)
+    return text
+
+def find_nonempty_run(flattened_runs, current_idx):
+    """Finds the first nonempty run after the given index"""
+    for current_idx in range(current_idx+1, len(flattened_runs)):
+        text = flattened_runs[current_idx].text
+
+        if not (text == "" or only_punctuations(text) or only_digits(text)):
+            break
+    
+    return flattened_runs[current_idx]
