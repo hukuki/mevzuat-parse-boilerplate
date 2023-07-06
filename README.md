@@ -1,6 +1,6 @@
 # mevzuat-parse-boilerplate
 
-## How to create a new scraper
+## How to create a new scraper
 
 Create a new branch. Branch name will be the name of your scraper.
 
