@@ -1,7 +1,6 @@
 # mevzuat-parse-boilerplate
 
-
-### How to create a new scraper
+## How to create a new scraper
 
 Create a new branch. Branch name will be the name of your scraper.
 
@@ -20,3 +19,5 @@ Use `registry.json` file to report which files are parsed correctly with your sc
 }
 
 ```
+
+Add scraper outputs to https://drive.google.com/drive/folders/1ysjxlKBmT9gaxQkqgLrPHS94SapAsxLZ?usp=sharing 
